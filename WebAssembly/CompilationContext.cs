@@ -33,8 +33,14 @@ namespace WebAssembly
             this.Types = types;
             this.Globals = globals;
 
+#if ORIG
+            
             if (functionElements == null)
                 return;
+#else
+            if (functionElements == null)
+                functionElements = new Compile.Indirect[0]  {};
+#endif
 
             //Capture the information about indirectly-callable functions.
             var indirectBuilder = module.DefineType("☣ Indirect",
@@ -82,7 +88,8 @@ namespace WebAssembly
 
             this.generator = il = indirectBuilder.DefineTypeInitializer().GetILGenerator();
 
-            Instructions.Int32Constant.Emit(this, functionElements.Length);
+            Instructions.Int32Constant.Emit(this, (functionElements == null) ? 0 : functionElements.Length);
+
             il.Emit(OpCodes.Newarr, indirectBuilder.AsType());
 
             for (var i = 0; i < functionElements.Length; i++)

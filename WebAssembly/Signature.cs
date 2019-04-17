@@ -43,11 +43,13 @@ namespace WebAssembly
             for (var i = 0; i < parameters.Length; i++)
                 parameters[i] = (rawParameters[i] = (ValueType)reader.ReadVarInt7()).ToSystemType();
 
-            var returns = this.ReturnTypes = new System.Type[reader.ReadVarUInt1()];
+            //crusso: var returns = this.ReturnTypes = new System.Type[reader.ReadVarUInt1()];
+            var returns = this.ReturnTypes = new System.Type[reader.ReadVarUInt32()];
             var rawReturns = this.RawReturnTypes = new ValueType[returns.Length];
 
-            if (returns.Length > 1)
-                throw new ModuleLoadException("Multiple returns are not supported.", reader.Offset - 1);
+            //crusso
+            //if (returns.Length > 1)
+            //    throw new ModuleLoadException("Multiple returns are not supported.", reader.Offset - 1);
 
             for (var i = 0; i < returns.Length; i++)
                 returns[i] = (rawReturns[i] = (ValueType)reader.ReadVarInt7()).ToSystemType();

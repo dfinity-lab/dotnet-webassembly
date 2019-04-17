@@ -576,7 +576,11 @@ namespace WebAssembly
                                         xFunctions.Add(new KeyValuePair<string, uint>(name, index));
                                         break;
                                     case ExternalKind.Table:
-                                        throw new NotSupportedException($"Unsupported export kind {kind}.");
+#if ORIG
+                                       throw new NotSupportedException($"Unsupported export kind {kind}.");
+#else
+                                       break; 
+#endif
                                     case ExternalKind.Memory:
                                         if (index != 0)
                                             throw new ModuleLoadException($"Exported memory must be of index 0, found {index}.", preIndexOffset);
@@ -653,7 +657,11 @@ namespace WebAssembly
                     case Section.Start:
                         {
                             var preReadOffset = reader.Offset;
+#if ORIG
                             var startIndex = reader.ReadVarInt32();
+#else
+                            var startIndex = reader.ReadVarUInt32();
+#endif
                             if (startIndex >= internalFunctions.Length)
                                 throw new ModuleLoadException($"Start function of index {startIndex} exceeds available functions of {internalFunctions.Length}", preReadOffset);
 
@@ -748,6 +756,10 @@ namespace WebAssembly
                                     il.DeclareLocal(local.ToSystemType());
                                 }
 
+#if ORIG
+#else
+                                il.Emit(System.Reflection.Emit.OpCodes.Break);
+#endif
                                 foreach (var instruction in Instruction.Parse(reader))
                                 {
                                     instruction.Compile(context);

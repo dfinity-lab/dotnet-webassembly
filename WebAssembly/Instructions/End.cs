@@ -37,10 +37,13 @@ namespace WebAssembly.Instructions
 
                 var returns = context.Signature.RawReturnTypes;
                 var returnsLength = returns.Length;
+
+#if ORIG
                 if (returnsLength != stack.Count)
                     throw new StackSizeIncorrectException(OpCode.End, returnsLength, stack.Count);
 
                 Assert(returnsLength == 0 || returnsLength == 1); //WebAssembly doesn't currently offer multiple returns, which should be blocked earlier.
+#endif
 
                 if (returnsLength == 1)
                 {
