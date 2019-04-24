@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-		<TargetFrameworks>netstandard1.4;net45</TargetFrameworks>
+		<!--<TargetFrameworks>netstandard1.4;net45</TargetFrameworks>-->
+    <TargetFrameworks>net45</TargetFrameworks>
 		<Title>WebAssembly for .NET</Title>
 		<PackageVersion>0.3.7-preview</PackageVersion>
 		<Authors>Ryan Lamansky</Authors>
@@ -18,6 +19,7 @@
 		<SignAssembly>true</SignAssembly>
 		<DelaySign>false</DelaySign>
 		<AssemblyOriginatorKeyFile>Properties\WebAssembly.snk</AssemblyOriginatorKeyFile>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -34,6 +36,10 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.4'">
     <PackageReference Include="System.Reflection.Emit" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\sourcemap-toolkit\src\SourcemapToolkit.SourcemapParser\SourcemapToolkit.SourcemapParser.csproj" />
   </ItemGroup>
 
 </Project>

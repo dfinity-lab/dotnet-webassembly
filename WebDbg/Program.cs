@@ -2,6 +2,9 @@
 using WebAssembly; // Acquire from https://www.nuget.org/packages/WebAssembly
 using WebAssembly.Instructions;
 using System;
+using System.IO;
+
+using SourcemapToolkit.SourcemapParser;
 
 namespace WebDbg { 
 
@@ -18,6 +21,15 @@ public abstract class Sample
         {
             // Module can be used to create, read, modify, and write WebAssembly files.
 
+
+            SourceMapParser parser = new SourceMapParser();
+            SourceMap sourceMap;
+            using (FileStream stream = new FileStream(@"../../fac.wasm.map", FileMode.Open))
+            {
+                sourceMap = parser.ParseSourceMap(new StreamReader(stream));
+            }
+
+            var parsedMapping = sourceMap.ParsedMappings;
 
             var module = Module.ReadFromBinary("../../fac.wasm");
 

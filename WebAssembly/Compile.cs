@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using SourcemapToolkit.SourcemapParser;
+
 namespace WebAssembly
 {
     /// <summary>
@@ -174,9 +176,45 @@ namespace WebAssembly
                 new AssemblyName("CompiledWebAssembly"),
                 AssemblyBuilderAccess.RunAndCollect
                 )
+#if ORIG
                 .DefineDynamicModule("CompiledWebAssembly")
+#else
+                .DefineDynamicModule("CompiledWebAssembly", true) // only works on .NET4.5
+#endif
                 ;
+#if ORIG
+#else
 
+            System.Type daType = typeof(System.Diagnostics.DebuggableAttribute);
+
+            ConstructorInfo daCtor = daType.GetConstructor(new System.Type[] { typeof(System.Diagnostics.DebuggableAttribute.DebuggingModes) });
+
+            CustomAttributeBuilder daBuilder = new CustomAttributeBuilder(daCtor, new object[] {
+
+            System.Diagnostics.DebuggableAttribute.DebuggingModes.DisableOptimizations |
+
+            System.Diagnostics.DebuggableAttribute.DebuggingModes.Default });
+
+            module.SetCustomAttribute(daBuilder);
+
+            // Tell Emit about the source file that we want to associate this with.
+
+            System.Diagnostics.SymbolStore.ISymbolDocumentWriter prelude_doc = module.DefineDocument(@"prelude.as", Guid.Empty, Guid.Empty, Guid.Empty);
+            System.Diagnostics.SymbolStore.ISymbolDocumentWriter fac_doc = module.DefineDocument(@"fac.as", Guid.Empty, Guid.Empty, Guid.Empty);
+
+
+            //TODO, pass in optional source map instead
+            SourceMapParser parser = new SourceMapParser();
+            SourceMap sourceMap;
+            using (FileStream stream = new FileStream(@"../../fac.wasm.map", FileMode.Open))
+            {
+                sourceMap = parser.ParseSourceMap(new StreamReader(stream));
+            }
+
+            var parsedMapping = sourceMap.ParsedMappings;
+
+
+#endif
             const TypeAttributes classAttributes =
                 TypeAttributes.Public |
                 TypeAttributes.Class |
@@ -356,6 +394,13 @@ namespace WebAssembly
                                     signature.ReturnTypes.FirstOrDefault(),
                                     parms
                                     );
+#if !ORIG
+                                var method = (MethodBuilder) internalFunctions[i];
+                                for (var parm = 0; parm < signature.ParameterTypes.Length; parm++)
+                                {
+                                    method.DefineParameter(1+parm, ParameterAttributes.In, "Param_" + parm);
+                                }
+#endif
                             }
                         }
                         break;
@@ -753,15 +798,42 @@ namespace WebAssembly
 
                                 foreach (var local in locals.SelectMany(local => Enumerable.Range(0, checked((int)local.Count)).Select(_ => local.Type)))
                                 {
+#if ORIG
                                     il.DeclareLocal(local.ToSystemType());
+#else
+                                    var localBuilder = il.DeclareLocal(local.ToSystemType());
+                                    localBuilder.SetLocalSymInfo("LOCAL"+localBuilder.LocalIndex); // Provide name for the debugger. 
+#endif
+
                                 }
 
 #if ORIG
 #else
-                                il.Emit(System.Reflection.Emit.OpCodes.Break);
+                                //il.Emit(System.Reflection.Emit.OpCodes.Break);
 #endif
                                 foreach (var instruction in Instruction.Parse(reader))
                                 {
+
+#if ORIG
+#else
+                                    var sp = new SourcePosition();
+                                    sp.ZeroBasedColumnNumber = (int) reader.Offset;
+                                    sp.ZeroBasedLineNumber = 0;
+                                    var me = sourceMap.GetMappingEntryForGeneratedSourcePosition(sp);
+                                    
+                                    if (me != null)
+                                    {
+                                        var osp = me.OriginalSourcePosition;
+                                        System.Diagnostics.Debug.Assert(me.OriginalFileName.Equals("prelude"));
+                                        var doc = me.OriginalFileName.Equals("prelude") ? prelude_doc : fac_doc;
+                                        il.MarkSequencePoint(doc,
+                                         osp.ZeroBasedLineNumber + 1,
+                                        osp.ZeroBasedColumnNumber + 1,
+                                        osp.ZeroBasedLineNumber + 1,
+                                        osp.ZeroBasedColumnNumber + 1 + 80);
+                                    }
+#endif
+
                                     instruction.Compile(context);
                                     context.Previous = instruction.OpCode;
                                 }
@@ -874,7 +946,10 @@ namespace WebAssembly
                         signature.ReturnTypes.FirstOrDefault(),
                         signature.ParameterTypes
                         );
-
+#if !ORIG
+                    for (var parm = 0; parm < signature.ParameterTypes.Length; parm++)
+                        method.DefineParameter(parm, ParameterAttributes.In, "Param_"+i);
+#endif
                     var il = method.GetILGenerator();
                     for (var parm = 0; parm < signature.ParameterTypes.Length; parm++)
                         il.Emit(OpCodes.Ldarg, parm + 1);

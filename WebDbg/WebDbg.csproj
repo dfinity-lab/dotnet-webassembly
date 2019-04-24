@@ -48,8 +48,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\sourcemap-toolkit\src\SourcemapToolkit.SourcemapParser\SourcemapToolkit.SourcemapParser.csproj">
+      <Project>{69fd1eb5-32f2-4759-9187-9a8e25927bca}</Project>
+      <Name>SourcemapToolkit.SourcemapParser</Name>
+    </ProjectReference>
     <ProjectReference Include="..\WebAssembly\WebAssembly.csproj">
       <Project>{e9676c8c-a671-4978-8c62-40bba257a597}</Project>
       <Name>WebAssembly</Name>
