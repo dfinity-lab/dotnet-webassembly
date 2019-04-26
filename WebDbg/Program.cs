@@ -3,6 +3,7 @@ using WebAssembly; // Acquire from https://www.nuget.org/packages/WebAssembly
 using WebAssembly.Instructions;
 using System;
 using System.IO;
+using System.Linq;
 
 using SourcemapToolkit.SourcemapParser;
 
@@ -14,6 +15,7 @@ public abstract class Sample
         // Sometimes you can use C# dynamic instead of building an abstract class like this.
        // public abstract int Fac(int i);
     }
+
 
     static class Program
     {
@@ -33,8 +35,11 @@ public abstract class Sample
 
             var module = Module.ReadFromBinary("../../fac.wasm");
 
+            var nameSection = module.CustomSections.FirstOrDefault(cs => cs.Name == "name");
 
-
+            var NameSection = new NameSection(nameSection);
+            
+            
             // We now have enough for a usable WASM file, which we could save with module.WriteToBinary().
             // Below, we show how the Compile feature can be used for .NET-based execution.
             // For stream-based compilation, WebAssembly.Compile should be used.
