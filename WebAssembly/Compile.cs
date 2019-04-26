@@ -152,6 +152,18 @@ namespace WebAssembly
             IEnumerable<RuntimeImport> imports
             )
         {
+
+#if !ORIG
+            // extract the name section (TODO, pass me in)
+
+            var tmp = Module.ReadFromBinary("../../fac.wasm");
+
+            var nameSection = tmp.CustomSections.FirstOrDefault(cs => cs.Name == "name");
+
+            var NameSection = new NameSection(nameSection);
+#endif
+
+
             if (reader.ReadUInt32() != Module.Magic)
                 throw new ModuleLoadException("File preamble magic value is incorrect.", 0);
 
@@ -172,14 +184,21 @@ namespace WebAssembly
             KeyValuePair<string, uint>[] exportedFunctions = null;
             var previousSection = Section.None;
 
+
+
+#if ORIG
             var module = AssemblyBuilder.DefineDynamicAssembly(
                 new AssemblyName("CompiledWebAssembly"),
                 AssemblyBuilderAccess.RunAndCollect
                 )
-#if ORIG
                 .DefineDynamicModule("CompiledWebAssembly")
 #else
-                .DefineDynamicModule("CompiledWebAssembly", true) // only works on .NET4.5
+            var assemblyName = (NameSection != null && NameSection.Name != null) ? NameSection.Name : "CompileWebAssembly";
+            var module = AssemblyBuilder.DefineDynamicAssembly(
+                new AssemblyName(assemblyName),
+                AssemblyBuilderAccess.RunAndCollect
+                )
+                .DefineDynamicModule(assemblyName, true) // only works on .NET4.5
 #endif
                 ;
 #if ORIG
@@ -212,6 +231,8 @@ namespace WebAssembly
             }
 
             var parsedMapping = sourceMap.ParsedMappings;
+
+
 
 
 #endif
@@ -387,18 +408,32 @@ namespace WebAssembly
                             {
                                 var signature = functionSignatures[i] = signatures[reader.ReadVarUInt32()];
                                 var parms = signature.ParameterTypes.Concat(new[] { exports }).ToArray();
+
+                                string fname = @"";
+                                NameSection.Functions.TryGetValue((uint) i, out fname);
+
+
                                 internalFunctions[i] = exportsBuilder.DefineMethod(
-                                    $"👻 {i}",
+                                    fname+$"👻 {i}",
                                     internalFunctionAttributes,
                                     CallingConventions.Standard,
                                     signature.ReturnTypes.FirstOrDefault(),
                                     parms
                                     );
 #if !ORIG
-                                var method = (MethodBuilder) internalFunctions[i];
+
+                                Dictionary<uint, string> localMap = null;
+                                NameSection.Locals.TryGetValue((uint)i, out localMap);
+
+                                var method = (MethodBuilder)internalFunctions[i];
                                 for (var parm = 0; parm < signature.ParameterTypes.Length; parm++)
                                 {
-                                    method.DefineParameter(1+parm, ParameterAttributes.In, "Param_" + parm);
+                                    string name = null;
+                                    if (localMap != null)
+                                    {
+                                        localMap.TryGetValue((uint)parm, out name);
+                                    }
+                                    method.DefineParameter(1 + parm, ParameterAttributes.In, (name != null) ? name : "Param_" + name);
                                 }
 #endif
                             }
@@ -787,6 +822,7 @@ namespace WebAssembly
 
                                 var il = ((MethodBuilder)internalFunctions[importedFunctions + functionBodyIndex]).GetILGenerator();
 
+                                
                                 context.Reset(
                                     il,
                                     signature,
@@ -796,13 +832,31 @@ namespace WebAssembly
                                         ).ToArray()
                                     );
 
+
+                                Dictionary<uint,string> localMap = null;
+                                NameSection.Locals.TryGetValue((uint) (importedFunctions + functionBodyIndex), out localMap);
+#if !ORIG
+                                uint curIndex = (uint) signature.RawParameterTypes.Length;
+#endif
                                 foreach (var local in locals.SelectMany(local => Enumerable.Range(0, checked((int)local.Count)).Select(_ => local.Type)))
                                 {
 #if ORIG
                                     il.DeclareLocal(local.ToSystemType());
 #else
                                     var localBuilder = il.DeclareLocal(local.ToSystemType());
-                                    localBuilder.SetLocalSymInfo("LOCAL"+localBuilder.LocalIndex); // Provide name for the debugger. 
+
+                                    string name = null;
+
+                                    if (localMap != null)
+                                    {
+                                        localMap.TryGetValue(curIndex, out name);
+                                    }
+
+                                    localBuilder.SetLocalSymInfo((name != null) ? name : "Local_"+curIndex ); // Provide name for the debugger. 
+
+
+                                    curIndex++;
+
 #endif
 
                                 }
