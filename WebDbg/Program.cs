@@ -33,13 +33,13 @@ public abstract class Sample
 
             var module = Module.ReadFromBinary("../../fac.wasm");
 
-   
-           
+
+
             // We now have enough for a usable WASM file, which we could save with module.WriteToBinary().
             // Below, we show how the Compile feature can be used for .NET-based execution.
             // For stream-based compilation, WebAssembly.Compile should be used.
-            var instanceCreator = module.Compile<Sample>();
-
+            // var instanceCreator = module.Compile<Sample>();
+            var instanceCreator = Compile.FromBinary<Sample>(@"../../fac.wasm");
             // Instances should be wrapped in a "using" block for automatic disposal.
             using (var instance = instanceCreator())
             {

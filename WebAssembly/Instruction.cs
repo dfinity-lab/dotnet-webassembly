@@ -80,9 +80,10 @@ namespace WebAssembly
         /// Parses an instruction stream.
         /// </summary>
         /// <param name="reader">The source of binary data.</param>
+        /// <param name="offsets"></param>
         /// <returns>Parsed instructions.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="reader"/> cannot be null.</exception>
-        internal static IEnumerable<Instruction> Parse(Reader reader)
+        internal static IEnumerable<Instruction> Parse(Reader reader, System.Collections.Generic.List<long> offsets)
         {
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
@@ -91,6 +92,7 @@ namespace WebAssembly
             while (true)
             {
                 var initialOffset = reader.Offset;
+                offsets.Add(reader.Offset);
                 var opCode = (OpCode)reader.ReadByte();
                 switch (opCode)
                 {

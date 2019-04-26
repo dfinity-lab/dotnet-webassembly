@@ -810,8 +810,9 @@ namespace WebAssembly
 #if ORIG
 #else
                                 //il.Emit(System.Reflection.Emit.OpCodes.Break);
-#endif
-                                foreach (var instruction in Instruction.Parse(reader))
+#endif                          
+                                var offsets = new System.Collections.Generic.List<long>();
+                                foreach (var instruction in Instruction.Parse(reader, offsets))
                                 {
 
 #if ORIG
@@ -824,7 +825,7 @@ namespace WebAssembly
                                     if (me != null)
                                     {
                                         var osp = me.OriginalSourcePosition;
-                                        System.Diagnostics.Debug.Assert(me.OriginalFileName.Equals("prelude"));
+                                        //System.Diagnostics.Debug.Assert(me.OriginalFileName.Equals("prelude"));
                                         var doc = me.OriginalFileName.Equals("prelude") ? prelude_doc : fac_doc;
                                         il.MarkSequencePoint(doc,
                                          osp.ZeroBasedLineNumber + 1,

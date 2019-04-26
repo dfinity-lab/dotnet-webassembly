@@ -37,6 +37,7 @@ namespace WebAssembly
             set => this.code = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+        internal IList<long> offsets = null;
         /// <summary>
         /// Creates a new instance of <see cref="FunctionBody"/>.
         /// </summary>
@@ -54,8 +55,9 @@ namespace WebAssembly
             var locals = this.Locals = new List<Local>(checked((int)localCount));
             for (var i = 0; i < localCount; i++)
                 locals.Add(new Local(reader));
-
-            this.code = Instruction.Parse(reader).ToArray();
+            var offsets = new System.Collections.Generic.List<long>();
+            this.offsets = offsets;
+            this.code = Instruction.Parse(reader, offsets).ToArray();
 
             if (reader.Offset - startingOffset != byteLength)
                 throw new ModuleLoadException($"Instruction sequence reader ended after readering {reader.Offset - startingOffset} characters, expected {byteLength}.", reader.Offset);
