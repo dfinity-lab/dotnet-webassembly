@@ -1056,13 +1056,22 @@ namespace WebAssembly
                 }
             }
 
+#if !ORIG
+            instanceConstructorIL.Emit(OpCodes.Ldarg_0);
+            instanceConstructorIL.Emit(OpCodes.Ldfld, context.Memory);
+            var fields = typeof(Globals).GetFields();
+            instanceConstructorIL.Emit(OpCodes.Stsfld, fields[0]);
+#endif
+
             if (startFunction != null)
             {
                 instanceConstructorIL.Emit(OpCodes.Ldarg_0);
                 instanceConstructorIL.Emit(OpCodes.Call, startFunction);
             }
 
-            instanceConstructorIL.Emit(OpCodes.Ret); //Finish the constructor.
+
+
+           instanceConstructorIL.Emit(OpCodes.Ret); //Finish the constructor.
             var exportInfo = exportsBuilder.CreateTypeInfo();
 
             TypeInfo instance;
