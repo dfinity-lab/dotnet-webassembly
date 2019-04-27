@@ -20,7 +20,7 @@ namespace WebAssembly {
         public static Value ReadValue(UInt32 index) => (Value) unchecked((uint) Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index)));
 
         public static string ReadUTF8(UInt32 index, int byteLen) =>
-//@TODO fix me
+            //@TODO fix me : use PtrToStringUTF8 which is documented but not available  (version skew?)
             Marshal.PtrToStringAnsi(IntPtr.Add(mem.Start, (int)index),byteLen);
 
     }
@@ -41,18 +41,25 @@ namespace WebAssembly {
    };
 
    [DebuggerTypeProxy(typeof(WebAssembly.Value.Display))]
-   [DebuggerDisplay("")]
+   [DebuggerDisplay("{ToString(),nq}")]
     public struct Value
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public uint value;
 
         public Value (uint value) { this.value = value; }
         // DebuggerTypeProxy(typeof(WebAssembly.Value.Display), Target = typeof(WebAssembly.Value))
         public static explicit operator Value(uint v) { return new Value(v); }
-        
+
+        public override string ToString()
+        {
+            return new Display(this).obj.ToString();
+        }
+
         [DebuggerDisplay("{obj}")]
         public class Display
         {
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
             public object obj = null;
             public Display(Value v)
             {

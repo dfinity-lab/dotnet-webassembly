@@ -843,6 +843,7 @@ namespace WebAssembly
 #if ORIG
                                     il.DeclareLocal(local.ToSystemType());
 #else
+#if ENABLED
                                     var localBuilder = il.DeclareLocal(local.ToSystemType());
 
                                     string name = null;
@@ -853,7 +854,9 @@ namespace WebAssembly
                                     }
 
                                     localBuilder.SetLocalSymInfo((name != null) ? name : "Local_"+curIndex ); // Provide name for the debugger. 
-
+#else
+                                    il.DeclareLocal(local.ToSystemType());
+#endif
                                     curIndex++;
 
 #endif
@@ -878,7 +881,7 @@ namespace WebAssembly
                                         if (name != null)
                                         {
                                             var localBuilder = il.DeclareLocal(typeof(Value).MakeByRefType());
-                                            localBuilder.SetLocalSymInfo(name+"_"); // Provide name for the debugger. 
+                                            localBuilder.SetLocalSymInfo(name); // Provide name for the debugger. 
 
                                             var localIndex = curIndex - signature.ParameterTypes.Length;
                                             if (localIndex < 0)
