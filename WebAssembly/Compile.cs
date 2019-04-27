@@ -854,12 +854,53 @@ namespace WebAssembly
 
                                     localBuilder.SetLocalSymInfo((name != null) ? name : "Local_"+curIndex ); // Provide name for the debugger. 
 
-
                                     curIndex++;
 
 #endif
 
                                 }
+
+#if !ORIG
+                                curIndex = (uint)signature.RawParameterTypes.Length;
+                                foreach (var local in locals.SelectMany(local => Enumerable.Range(0, checked((int)local.Count)).Select(_ => local.Type)))
+                                {
+
+                                    if (local == ValueType.Int32)
+                                    {
+
+                                        string name = null;
+
+                                        if (localMap != null)
+                                        {
+                                            localMap.TryGetValue(curIndex, out name);
+                                        }
+
+                                        if (name != null)
+                                        {
+                                            var localBuilder = il.DeclareLocal(typeof(Value).MakeByRefType());
+                                            localBuilder.SetLocalSymInfo(name+"_"); // Provide name for the debugger. 
+
+                                            var localIndex = curIndex - signature.ParameterTypes.Length;
+                                            if (localIndex < 0)
+                                            {
+                                                context.Emit(OpCodes.Ldarga, checked((ushort)curIndex));
+                                                context.Emit(OpCodes.Stloc, checked((ushort)localBuilder.LocalIndex));
+                                            }
+                                            else
+                                            {
+                                                context.Emit(OpCodes.Ldloca, checked((ushort)localIndex));
+                                                context.Emit(OpCodes.Stloc, checked((ushort)localBuilder.LocalIndex));
+                                            }
+
+                                        }
+                                    }
+                                    curIndex++;
+                                }
+
+#endif
+
+                             
+
 
 #if ORIG
 #else
