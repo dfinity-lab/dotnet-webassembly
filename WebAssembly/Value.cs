@@ -91,7 +91,20 @@ namespace WebAssembly {
                 switch (tag)
                 {
                     case Tag.Object:
-                        break;
+                        {
+                            var len = Globals.ReadInt32(ptr + (sizeof(Tag)));
+                            var a = new Tuple<Int32,Value>[len];
+                            var elem = ptr + (uint)sizeof(Tag) + (uint)sizeof(Int32);
+                            for (uint i = 0; i < len; i++)
+                            {
+                                var hash = Globals.ReadInt32(elem);
+                                elem += (uint)sizeof(Int32);
+                                var value = Globals.ReadValue(elem);
+                                elem += (uint)sizeof(Int32);
+                                a[i] = new Tuple<int, Value>(hash, value);
+                            }
+                            return a;
+                        }
                     case Tag.ObjInd:
                         break;
                     case Tag.Array:
