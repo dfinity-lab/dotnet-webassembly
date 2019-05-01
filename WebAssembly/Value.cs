@@ -6,22 +6,105 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
+using System.IO;
+
+
 [assembly: DebuggerTypeProxy(typeof(WebAssembly.Value.Display), Target = typeof(WebAssembly.Value))]
 #if !ORIG 
+
+
+namespace WebAssembly
+{
+
+    using LabelMap = Dictionary<uint, string>;
+    internal enum ActorScriptSubsection : byte
+    {
+        Labels = 0
+    }
+    /// <summary>
+    /// 
+    /// </summary>
+    public class ActorScriptSection
+    {
+        // c.f. https://webassembly.org/docs/binary-encoding/
+        /// <summary>
+        /// 
+        /// </summary>
+        public string Name;
+        /// <summary>
+        /// 
+        /// </summary>
+        public LabelMap Labels;
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="cs"></param>
+        public ActorScriptSection(CustomSection cs)
+        {
+            var stream = new MemoryStream((byte[])cs.Content);
+            var reader = new Reader(stream);
+            var previousSection = ActorScriptSubsection.Labels;
+            var preSectionOffset = reader.Offset;
+            while (reader.TryReadVarUInt7(out var id)) //At points where TryRead is used, the stream can safely end.
+            {
+                if (id != 0 && (ActorScriptSubsection)id < previousSection)
+                    throw new ModuleLoadException($"Sections out of order; section {(ActorScriptSubsection)id} encounterd after {previousSection}.", preSectionOffset);
+                var payloadLength = reader.ReadVarUInt32();
+
+                switch ((ActorScriptSubsection)id)
+                {
+
+                    case ActorScriptSubsection.Labels:
+                        {
+
+                            var count = reader.ReadVarUInt32();
+                            Labels = new LabelMap((int)count);
+                            for (int i = 0; i < count; i++)
+                            {
+                                var index = reader.ReadVarUInt32();
+                                var nameLength = reader.ReadVarUInt32();
+                                var name = reader.ReadString(nameLength);
+                                Labels.Add(index, name);
+                            }
+                        }
+                        break;
+
+                    
+                }
+
+                previousSection = (ActorScriptSubsection)id;
+            }
+        }
+
+
+
+    }
+}
+
+
 namespace WebAssembly {
 
-    
+    public static class Meta
+    {
+        public static ActorScriptSection actorScriptSection = null;
+    }
     public static class Globals
     {
         public static Runtime.UnmanagedMemory mem = null;
         public static byte ReadByte(UInt32 index) => Marshal.ReadByte(IntPtr.Add(mem.Start, (int) index));
         public static int ReadInt32(UInt32 index) => Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index));
+
+        public static long ReadInt64(UInt32 index) => Marshal.ReadInt64(IntPtr.Add(mem.Start, (int)index));
         public static Tag ReadTag(UInt32 index) => (Tag) Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index));
         public static Value ReadValue(UInt32 index) => (Value) unchecked((uint) Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index)));
 
         public static string ReadUTF8(UInt32 index, int byteLen) =>
             //@TODO fix me : use PtrToStringUTF8 which is documented but not available  (version skew?)
             Marshal.PtrToStringAnsi(IntPtr.Add(mem.Start, (int)index),byteLen);
+
+        public static string ReadLabel(UInt32 index) =>
+            Meta.actorScriptSection.Labels[
+               unchecked((uint)Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index)))];
 
     }
 
@@ -40,12 +123,46 @@ namespace WebAssembly {
     SmallWord = 12,
    };
 
+    [DebuggerDisplay("{ToString(),nq}")]
+    public struct Field
+    {
+        public string lab;
+        public Value val;
+        public Field (string lab, Value val) { this.lab = lab; this.val = val; }
+
+        public override string ToString() => lab + "=" + val;
+      
+    }
+
+    [DebuggerDisplay("{ToString(),nq}")]
+    public struct Variant
+    {
+        public string lab;
+        public Value val;
+        public Variant(string lab, Value val) { this.lab = lab; this.val = val; }
+
+        public override string ToString() => "#"+lab + val;
+    }
+
+
+    [DebuggerDisplay("{ToString(),nq}")]
+    public struct Some
+    {
+        public Value val;
+        public Some(Value val) { this.val = val; }
+
+        public override string ToString() => "? " + val;
+    }
+
+
    [DebuggerTypeProxy(typeof(WebAssembly.Value.Display))]
    [DebuggerDisplay("{ToString(),nq}")]
     public struct Value
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public uint value;
+
+
 
         public Value (uint value) { this.value = value; }
         // DebuggerTypeProxy(typeof(WebAssembly.Value.Display), Target = typeof(WebAssembly.Value))
@@ -93,15 +210,15 @@ namespace WebAssembly {
                     case Tag.Object:
                         {
                             var len = Globals.ReadInt32(ptr + (sizeof(Tag)));
-                            var a = new Tuple<Int32,Value>[len];
+                            var a = new Field[len];
                             var elem = ptr + (uint)sizeof(Tag) + (uint)sizeof(Int32);
                             for (uint i = 0; i < len; i++)
                             {
-                                var hash = Globals.ReadInt32(elem);
+                                var label = Globals.ReadLabel(elem);
                                 elem += (uint)sizeof(Int32);
                                 var value = Globals.ReadValue(elem);
                                 elem += (uint)sizeof(Int32);
-                                a[i] = new Tuple<int, Value>(hash, value);
+                                a[i] = new Field(label, value);
                             }
                             return a;
                         }
@@ -120,7 +237,10 @@ namespace WebAssembly {
                             return a;
                         }
                     case Tag.Int:
-                        break;
+                        {
+                            var i = Globals.ReadInt64(ptr + (sizeof(Tag)));
+                            return i;
+                        }
                     case Tag.MutBox:
                         break;
                     case Tag.Closure:
@@ -128,10 +248,18 @@ namespace WebAssembly {
                     case Tag.Some:
                         {    
                             var v = Globals.ReadValue(ptr+(sizeof(Tag)));
-                            return new Nullable<Value>(v);
+                            return new Some(v);
                         }
                     case Tag.Variant:
-                        break;
+                        {
+                            var elem = ptr + (uint)sizeof(Tag);
+                            var label = Globals.ReadLabel(elem);
+                            elem += (uint)sizeof(Int32);
+                            var value = Globals.ReadValue(elem);
+                            elem += (uint)sizeof(Int32);
+                            var variant = new Variant(label, value);
+                            return variant;
+                        }
                     case Tag.Text:
                         {
                             var len = Globals.ReadInt32(ptr + sizeof(Tag));

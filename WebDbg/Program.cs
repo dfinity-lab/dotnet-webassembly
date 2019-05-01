@@ -159,8 +159,11 @@ public abstract class Sample
             var nameSection = module.CustomSections.FirstOrDefault(cs => cs.Name == "name");
 
             var NameSection = new NameSection(nameSection);
-            
-            
+
+            var actorScriptSection = module.CustomSections.FirstOrDefault(cs => cs.Name == "actorScript");
+
+            Meta.actorScriptSection = new ActorScriptSection(actorScriptSection);
+
             // We now have enough for a usable WASM file, which we could save with module.WriteToBinary().
             // Below, we show how the Compile feature can be used for .NET-based execution.
             // For stream-based compilation, WebAssembly.Compile should be used.
