@@ -33,14 +33,8 @@ namespace WebAssembly
             this.Types = types;
             this.Globals = globals;
 
-#if ORIG
-            
             if (functionElements == null)
                 return;
-#else
-            if (functionElements == null)
-                functionElements = new Compile.Indirect[0]  {};
-#endif
 
             //Capture the information about indirectly-callable functions.
             var indirectBuilder = module.DefineType("☣ Indirect",
@@ -88,11 +82,11 @@ namespace WebAssembly
 
             this.generator = il = indirectBuilder.DefineTypeInitializer().GetILGenerator();
 
-            Instructions.Int32Constant.Emit(this, (functionElements == null) ? 0 : functionElements.Length);
+            Instructions.Int32Constant.Emit(this, functionElements.Length);
 
             il.Emit(OpCodes.Newarr, indirectBuilder.AsType());
 
-            for (var i = 0; i < functionElements.Length; i++)
+            for (var i = 0; i < ( (functionElements == null) ? 0  : functionElements.Length); i++)
             {
                 var fe = functionElements[i];
                 il.Emit(OpCodes.Dup);
@@ -122,6 +116,13 @@ namespace WebAssembly
             var value = il.DeclareLocal(indirectBuilder.AsType());
             var indexOutOfRange = il.DeclareLocal(typeof(IndexOutOfRangeException));
             var endTry = il.BeginExceptionBlock();
+#if !ORIG
+            var obj = il.DeclareLocal(typeof(object));
+            obj.SetLocalSymInfo("indirectLocationsFieldBuilder");
+            il.Emit(OpCodes.Ldsfld, indirectLocationsFieldBuilder);
+            il.Emit(OpCodes.Stloc_2);
+            il.Emit(OpCodes.Break);
+#endif
             il.Emit(OpCodes.Ldsfld, indirectLocationsFieldBuilder);
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldelem, indirectBuilder.AsType());

@@ -1,5 +1,5 @@
 
-/*
+
 func swap(a : [var Int], i : Nat, j : Nat) {
   let temp = a[i];
   a[i] := a[j];
@@ -28,7 +28,7 @@ func quicksort(a : [var Int], lo : Nat, hi : Nat) {
 };
 
 
-*/
+
 
 func fac(n : Nat) : Nat {
   if (n == 0)  {
@@ -53,15 +53,14 @@ func display () {
   let obj = new {x = 1; y = 2};
   let variant = #node (#leaf "left", #leaf "right");
   let f = fac;
- //  let _ = f 1; // bug?
+  let _ = f 1; // bug?
 };
 
 let _ = display();
 
-let res = fac 20;
+let res = fac 6;
 
-/*
+
 let a : [var Int] = [var 8, 3, 9, 5, 2];
 
 quicksort(a, 0, 4);
-*/

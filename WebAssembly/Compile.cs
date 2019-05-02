@@ -796,7 +796,11 @@ namespace WebAssembly
                             if (functionBodies != functionSignatures.Length - importedFunctions)
                                 throw new ModuleLoadException($"Code section has {functionBodies} functions described but {functionSignatures.Length - importedFunctions} were expected.", preBodiesIndex);
 
-                            if (context == null) //Might have been created by the Global section, if present.
+#if ORIG
+                            if (context == null) //Might have been created by the Global section, if present.   
+#else
+                            if (context == null || functionElements != null) //Might have been created by the Global section, if present.
+#endif
                             {
                                 context = new CompilationContext(
                                     exportsBuilder,
@@ -908,7 +912,7 @@ namespace WebAssembly
 #if ORIG
 #else
                                 //il.Emit(System.Reflection.Emit.OpCodes.Break);
-#endif                          
+#endif
                                 var offsets = new System.Collections.Generic.List<long>();
                                 foreach (var instruction in Instruction.Parse(reader, offsets))
                                 {

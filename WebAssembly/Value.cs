@@ -150,7 +150,6 @@ namespace WebAssembly {
     {
         public Value val;
         public Some(Value val) { this.val = val; }
-
         public override string ToString() => "? " + val;
     }
 
