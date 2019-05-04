@@ -53,7 +53,7 @@ func display () {
   let obj = new {x = 1; y = 2};
   let variant = #node (#leaf "left", #leaf "right");
   let f = fac;
-  let _ = f 1; // bug?
+  let _ = f 1; 
 };
 
 let _ = display();

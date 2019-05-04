@@ -38,13 +38,14 @@ namespace WebAssembly.Instructions
                 var returns = context.Signature.RawReturnTypes;
                 var returnsLength = returns.Length;
 
-#if ORIG
-                if (returnsLength != stack.Count)
-                    throw new StackSizeIncorrectException(OpCode.End, returnsLength, stack.Count);
+                //System.Diagnostics.Debug.Assert(returnsLength <= 1);
+#if !ORIG
+               // if (returnsLength != stack.Count)
+               //     throw new StackSizeIncorrectException(OpCode.End, returnsLength, stack.Count);
 
-                Assert(returnsLength == 0 || returnsLength == 1); //WebAssembly doesn't currently offer multiple returns, which should be blocked earlier.
-#endif
+                //Assert(returnsLength == 0 || returnsLength == 1); //WebAssembly doesn't currently offer multiple returns, which should be blocked earlier.
 
+               
                 if (returnsLength == 1)
                 {
                     var type = stack.Pop();
@@ -52,6 +53,22 @@ namespace WebAssembly.Instructions
                         throw new StackTypeInvalidException(OpCode.End, returns[0], type);
                 }
 
+                if (returnsLength > 1)
+                {
+                    for (int i = returnsLength-1; i >= 0; i--)
+                    {
+                        var type = stack.Pop();
+                        if (type != returns[i])
+                            throw new StackTypeInvalidException(OpCode.End, returns[i], type);
+                        if (i > 0)
+                        {
+                            //context.Emit(OpCodes.Starg,);
+                            context.Emit(OpCodes.Pop);
+                        }
+                    }
+
+                }
+#endif
                 context.Emit(OpCodes.Ret);
             }
             else

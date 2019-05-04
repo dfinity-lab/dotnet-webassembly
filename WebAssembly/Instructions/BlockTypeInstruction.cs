@@ -34,8 +34,34 @@ namespace WebAssembly.Instructions
         {
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
-
+#if SINGLEVALUE
             Type = (BlockType)reader.ReadVarInt7();
+#else
+            Type = (BlockType)reader.ReadVarInt7();
+
+            switch (Type)
+            {
+                case BlockType.Empty:
+                case BlockType.Float32:
+                case BlockType.Float64:
+                case BlockType.Int32:
+                case BlockType.Int64:
+                    return;
+            }
+
+            System.Diagnostics.Debug.Assert(false);
+
+            var rawParameters = new ValueType[reader.ReadVarUInt32()];
+
+            for (var i = 0; i < rawParameters.Length; i++)
+                rawParameters[i] = (ValueType)reader.ReadVarInt7();
+
+            var rawResults = new ValueType[reader.ReadVarUInt32()];
+
+            for (var i = 0; i < rawResults.Length; i++)
+               rawResults[i] = (ValueType)reader.ReadVarInt7();
+            Type = (BlockType) ((rawResults.Length == 0) ? (sbyte) 0 : (sbyte) rawResults[1]); 
+#endif
         }
 
         internal sealed override void WriteTo(Writer writer)

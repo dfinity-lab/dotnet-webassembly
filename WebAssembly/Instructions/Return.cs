@@ -36,6 +36,8 @@ namespace WebAssembly.Instructions
             if (stackCount < returnsLength)
                 throw new StackTooSmallException(OpCode.Return, returnsLength, 0);
 
+            System.Diagnostics.Debug.Assert(returnsLength <= 1);
+
             if (stackCount > returnsLength)
             {
                 if (returnsLength == 0)

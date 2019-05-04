@@ -39,7 +39,7 @@ namespace WebAssembly
             //Capture the information about indirectly-callable functions.
             var indirectBuilder = module.DefineType("☣ Indirect",
                 TypeAttributes.Public | //Change to something more appropriate once behavior is validated.
-                TypeAttributes.Sealed | TypeAttributes.SequentialLayout | TypeAttributes.BeforeFieldInit,
+                TypeAttributes.Sealed | TypeAttributes.SequentialLayout | TypeAttributes.BeforeFieldInit ,
                 typeof(System.ValueType)
                 );
 
@@ -77,7 +77,7 @@ namespace WebAssembly
 
             var indirectLocationsFieldBuilder = indirectBuilder.DefineField(
                 "☣ Locations",
-                typeof(IntPtr),
+                indirectBuilder.AsType().MakeArrayType(),
                 FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly);
 
             this.generator = il = indirectBuilder.DefineTypeInitializer().GetILGenerator();
@@ -116,7 +116,7 @@ namespace WebAssembly
             var value = il.DeclareLocal(indirectBuilder.AsType());
             var indexOutOfRange = il.DeclareLocal(typeof(IndexOutOfRangeException));
             var endTry = il.BeginExceptionBlock();
-#if !ORIG
+#if DISABLED
             var obj = il.DeclareLocal(typeof(object));
             obj.SetLocalSymInfo("indirectLocationsFieldBuilder");
             il.Emit(OpCodes.Ldsfld, indirectLocationsFieldBuilder);
@@ -190,6 +190,7 @@ namespace WebAssembly
             this.Locals = locals;
 
             this.Depth.Clear();
+#if !ORIG
             {
                 BlockType returnType;
                 if (signature.RawReturnTypes.Length == 0)
@@ -217,6 +218,39 @@ namespace WebAssembly
                 }
                 this.Depth.Push(returnType);
             }
+#else
+            {
+                BlockType returnType;
+                if (signature.RawReturnTypes.Length == 0)
+                {
+                    returnType = BlockType.Empty;
+                    this.Depth.Push(returnType);
+                }
+                else
+                {  foreach (var rawReturnType in signature.RawReturnTypes)
+                    {
+                        switch (rawReturnType)
+                        {
+                            default: //Should never happen.
+                            case ValueType.Int32:
+                                returnType = BlockType.Int32;
+                                break;
+                            case ValueType.Int64:
+                                returnType = BlockType.Int64;
+                                break;
+                            case ValueType.Float32:
+                                returnType = BlockType.Float32;
+                                break;
+                            case ValueType.Float64:
+                                returnType = BlockType.Float64;
+                                break;
+                        }
+                        this.Depth.Push(returnType);
+                    }
+                }
+                
+            }
+#endif
             this.Previous = OpCode.NoOperation;
             this.Labels.Clear();
             this.LoopLabels.Clear();

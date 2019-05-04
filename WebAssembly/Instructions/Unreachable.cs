@@ -26,6 +26,14 @@ namespace WebAssembly.Instructions
         {
 #if ORIG
 #else
+
+            var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Peek();
+
+            if (blockType != BlockType.Empty)
+            {
+                context.Stack.Push((ValueType)blockType);
+            }
+
             context.Emit(OpCodes.Break);
 #endif
             context.Emit(OpCodes.Newobj, typeof(UnreachableException).GetTypeInfo().DeclaredConstructors.First(c => c.GetParameters().Length == 0));

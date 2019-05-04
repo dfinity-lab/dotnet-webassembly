@@ -104,15 +104,32 @@ namespace WebAssembly.Instructions
             for (var i = 0; i < returnTypes.Length; i++)
                 stack.Push(returnTypes[i]);
 
+            var outs = new LocalBuilder[returnTypes.Length]; // slot 0 unused
+            for (var i = 1; i < returnTypes.Length; i++)
+            {
+                outs[i] = context.DeclareLocal(signature.ReturnTypes[i]);
+                context.Emit(OpCodes.Ldloca, checked((ushort) outs[i].LocalIndex));
+            }
+
             Int32Constant.Emit(context, checked((int)this.Type));
             context.Emit(OpCodes.Call, context[HelperMethod.GetFunctionPointer]);
             context.Emit(OpCodes.Stloc, context.IndirectPointerLocal.LocalIndex);
             context.EmitLoadThis();
             context.Emit(OpCodes.Ldloc, context.IndirectPointerLocal.LocalIndex);
+
+            
             context.EmitCalli(
                 signature.ReturnTypes.Length == 0 ? typeof(void) : signature.ReturnTypes[0],
-                signature.ParameterTypes.Concat(new[] { context.ExportsBuilder.AsType() }).ToArray(
+                signature.ParameterTypes.Concat(new[] { context.ExportsBuilder.AsType() }).
+                Concat(signature.ReturnTypes.Skip(1).Select(t => t.MakeByRefType()).ToArray()).
+                ToArray(
                 ));
+
+            for (var i = 1; i < returnTypes.Length; i++)
+            {
+                context.Emit(OpCodes.Ldloc, outs[i].LocalIndex);
+            }
+
         }
     }
 }

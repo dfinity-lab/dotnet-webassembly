@@ -100,7 +100,20 @@ namespace WebAssembly.Instructions
             var target = context.Methods[this.Index];
             if (target is MethodBuilder) //Indicates a dynamically generated method.
                 context.EmitLoadThis();
+
+            var outs = new LocalBuilder[returnTypes.Length]; // slot 0 unused
+            for (var i = 1; i < returnTypes.Length; i++) {
+                outs[i] = context.DeclareLocal(signature.ReturnTypes[i]);
+                context.Emit(OpCodes.Ldloca, checked ((ushort)outs[i].LocalIndex));
+            }
             context.Emit(OpCodes.Call, target);
+
+            for (var i = 1; i < returnTypes.Length; i++)
+            { 
+                context.Emit(OpCodes.Ldloc, checked((ushort)outs[i].LocalIndex));
+            }
+
+
         }
     }
 }

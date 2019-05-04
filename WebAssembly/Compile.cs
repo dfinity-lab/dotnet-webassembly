@@ -827,6 +827,10 @@ namespace WebAssembly
 
                                 var il = ((MethodBuilder)internalFunctions[importedFunctions + functionBodyIndex]).GetILGenerator();
 
+                                string name = null;
+                                NameSection.Functions.TryGetValue((uint)functionBodyIndex, out name);
+                                System.Diagnostics.Debug.Assert(name != "fac");
+
                                 
                                 context.Reset(
                                     il,
@@ -837,7 +841,7 @@ namespace WebAssembly
                                         ).ToArray()
                                     );
 
-
+                                
                                 Dictionary<uint,string> localMap = null;
                                 NameSection.Locals.TryGetValue((uint) (importedFunctions + functionBodyIndex), out localMap);
 #if !ORIG
@@ -851,14 +855,14 @@ namespace WebAssembly
 #if !ORIG
                                     var localBuilder = il.DeclareLocal(local.ToSystemType());
 
-                                    string name = null;
+                                    string fname = null;
 
                                     if (localMap != null)
                                     {
-                                        localMap.TryGetValue(curIndex, out name);
+                                        localMap.TryGetValue(curIndex, out fname);
                                     }
 
-                                    localBuilder.SetLocalSymInfo((name != null) ? name : "Local_"+curIndex ); // Provide name for the debugger. 
+                                    localBuilder.SetLocalSymInfo((fname != null) ?fname : "Local_"+curIndex ); // Provide name for the debugger. 
 #else
                                     il.DeclareLocal(local.ToSystemType());
 #endif
@@ -913,7 +917,7 @@ namespace WebAssembly
 #if ORIG
 #else
                                 var dbg = new List<Instruction>();
-                                //il.Emit(System.Reflection.Emit.OpCodes.Break);
+                                if (name == "fac") il.Emit(System.Reflection.Emit.OpCodes.Break);
 #endif
                                 var offsets = new System.Collections.Generic.List<long>();
 
