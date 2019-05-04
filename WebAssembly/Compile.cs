@@ -194,11 +194,11 @@ namespace WebAssembly
                 .DefineDynamicModule("CompiledWebAssembly")
 #else
             var assemblyName = (NameSection != null && NameSection.Name != null) ? NameSection.Name : "CompileWebAssembly";
-            var module = AssemblyBuilder.DefineDynamicAssembly(
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
                 new AssemblyName(assemblyName),
-                AssemblyBuilderAccess.RunAndCollect
-                )
-                .DefineDynamicModule(assemblyName, true) // only works on .NET4.5
+                AssemblyBuilderAccess.RunAndSave
+                );
+            var module = assemblyBuilder.DefineDynamicModule(assemblyName, true) // only works on .NET4.5
 #endif
                 ;
 #if ORIG
@@ -412,13 +412,14 @@ namespace WebAssembly
                                 string fname = @"";
                                 NameSection.Functions.TryGetValue((uint) i, out fname);
 
+                                var res = signature.ReturnTypes.Skip(1).Select(t => t.MakeByRefType());
 
                                 internalFunctions[i] = exportsBuilder.DefineMethod(
-                                    fname+$"👻 {i}",
+                                    fname + $"👻 {i}",
                                     internalFunctionAttributes,
                                     CallingConventions.Standard,
                                     signature.ReturnTypes.FirstOrDefault(),
-                                    parms
+                                    parms.Concat(res).ToArray()
                                     );
 #if !ORIG
 
@@ -847,7 +848,7 @@ namespace WebAssembly
 #if ORIG
                                     il.DeclareLocal(local.ToSystemType());
 #else
-#if ENABLED
+#if !ORIG
                                     var localBuilder = il.DeclareLocal(local.ToSystemType());
 
                                     string name = null;
@@ -867,7 +868,7 @@ namespace WebAssembly
 
                                 }
 
-#if !ORIG
+#if DISABLED
                                 curIndex = (uint)signature.RawParameterTypes.Length;
                                 foreach (var local in locals.SelectMany(local => Enumerable.Range(0, checked((int)local.Count)).Select(_ => local.Type)))
                                 {
@@ -906,19 +907,23 @@ namespace WebAssembly
 
 #endif
 
-                             
+
 
 
 #if ORIG
 #else
+                                var dbg = new List<Instruction>();
                                 //il.Emit(System.Reflection.Emit.OpCodes.Break);
 #endif
                                 var offsets = new System.Collections.Generic.List<long>();
+
+                             
                                 foreach (var instruction in Instruction.Parse(reader, offsets))
                                 {
 
 #if ORIG
 #else
+                                    dbg.Add(instruction);
                                     var sp = new SourcePosition();
                                     sp.ZeroBasedColumnNumber = (int) reader.Offset;
                                     sp.ZeroBasedLineNumber = 0;
@@ -1104,6 +1109,10 @@ namespace WebAssembly
             }
 
             module.CreateGlobalFunctions();
+
+#if !ORIG
+            assemblyBuilder.Save(@"fac.as");
+#endif
             return instance.DeclaredConstructors.First();
         }
     }

@@ -141,7 +141,7 @@ namespace WebAssembly {
         public Value val;
         public Variant(string lab, Value val) { this.lab = lab; this.val = val; }
 
-        public override string ToString() => "#"+lab + val;
+        public override string ToString() => "#"+lab + " " +val;
     }
 
 
