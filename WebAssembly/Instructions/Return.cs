@@ -49,10 +49,10 @@ namespace WebAssembly.Instructions
                 {
                     var value = context.DeclareLocal(returns[0].ToSystemType());
                     context.Emit(OpCodes.Stloc, value.LocalIndex);
-
+                    
                     for (var i = 0; i < stackCount - returnsLength; i++)
                         context.Emit(OpCodes.Pop);
-
+                      
                     context.Emit(OpCodes.Ldloc, value.LocalIndex);
                 }
             }

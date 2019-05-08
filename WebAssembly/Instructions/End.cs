@@ -28,7 +28,9 @@ namespace WebAssembly.Instructions
             var stack = context.Stack;
             Assert(stack != null);
 
-            var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Pop();
+            var blockEntry = context.Depth.Count == 0 ? new BlockEntry(0, new ValueType[] { }, context) : context.Depth.Pop();
+            // var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Pop();
+
 
             if (context.Depth.Count == 0)
             {
@@ -40,12 +42,12 @@ namespace WebAssembly.Instructions
 
                 //System.Diagnostics.Debug.Assert(returnsLength <= 1);
 #if !ORIG
-               // if (returnsLength != stack.Count)
-               //     throw new StackSizeIncorrectException(OpCode.End, returnsLength, stack.Count);
+                // if (returnsLength != stack.Count)
+                //     throw new StackSizeIncorrectException(OpCode.End, returnsLength, stack.Count);
 
                 //Assert(returnsLength == 0 || returnsLength == 1); //WebAssembly doesn't currently offer multiple returns, which should be blocked earlier.
 
-               
+
                 if (returnsLength == 1)
                 {
                     var type = stack.Pop();
@@ -55,7 +57,7 @@ namespace WebAssembly.Instructions
 
                 if (returnsLength > 1)
                 {
-                    for (int i = returnsLength-1; i >= 0; i--)
+                    for (int i = returnsLength - 1; i >= 0; i--)
                     {
                         var type = stack.Pop();
                         if (type != returns[i])
@@ -73,22 +75,43 @@ namespace WebAssembly.Instructions
             }
             else
             {
-                if (blockType.TryToValueType(out var expectedType))
-                {
-                    var type = stack.Peek();
-                    if (type != expectedType)
-                        throw new StackTypeInvalidException(OpCode.End, expectedType, type);
-                }
+                var expectedTypes = blockEntry.Types;
+                var stackItems = stack.GetEnumerator();
+                /*
+                for (int i = expectedTypes.Length - 1; i >= 0; i--) {
+                    if (!stackItems.MoveNext())
+                        throw new StackSizeIncorrectException(OpCode.End, expectedTypes.Length, stack.Count);
+                    if (expectedTypes[i] != stackItems.Current)
+                        throw new StackTypeInvalidException(OpCode.End, expectedTypes[i], stackItems.Current);
+                   
+                };
+                */
 
+              
                 var depth = checked((uint)context.Depth.Count);
                 var label = context.Labels[depth];
 
-                if (!context.LoopLabels.Contains(label)) //Loop labels are marked where defined.
+                if (!context.LoopLabels.Contains(label))
+                { //Loop labels are marked where defined.
                     context.MarkLabel(label);
+                }
                 else
                     context.LoopLabels.Remove(label);
 
+
+                while (stack.Count > blockEntry.StackSize)
+                {
+                    stack.Pop();
+                }
+
+                for (int i = 0; i < expectedTypes.Length; i++)
+                {
+                    context.Stack.Push(expectedTypes[i]);
+                }
+
                 context.Labels.Remove(depth);
+
+  
             }
         }
     }

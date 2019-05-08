@@ -45,7 +45,7 @@ namespace WebAssembly.Instructions
 
             var label = context.DefineLabel();
             context.Labels.Add(checked((uint)context.Depth.Count), label);
-            context.Depth.Push(Type);
+            context.Depth.Push(context.BlockEntry(Type));
             context.Emit(OpCodes.Brfalse, label);
         }
     }

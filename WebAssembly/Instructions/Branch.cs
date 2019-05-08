@@ -1,5 +1,6 @@
 using System;
 using System.Reflection.Emit;
+using System.Linq;
 
 namespace WebAssembly.Instructions
 {
@@ -66,6 +67,30 @@ namespace WebAssembly.Instructions
 
         internal sealed override void Compile(CompilationContext context)
         {
+            BlockEntry blockEntry = context.Depth.ElementAt((int) this.Index);
+
+            var expectedTypes = blockEntry.Types;
+
+            for (int i = expectedTypes.Length - 1; i >= 0; i--)
+            {
+                context.Stack.Pop();
+                context.Emit(OpCodes.Stloc, blockEntry.Locals[i].LocalIndex);
+            }
+
+            var topop = context.Stack.Count - blockEntry.StackSize;
+            while (topop-- > 0)
+            {
+                //context.Stack.Pop();
+                context.Emit(OpCodes.Pop);
+            }
+
+
+            for (int i = 0; i < expectedTypes.Length; i++)
+            {
+                context.Emit(OpCodes.Ldloc, blockEntry.Locals[i].LocalIndex);
+            }
+
+
             context.Emit(OpCodes.Br, context.Labels[checked((uint)context.Depth.Count) - this.Index - 1]);
         }
     }

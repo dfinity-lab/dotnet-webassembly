@@ -24,20 +24,39 @@ namespace WebAssembly.Instructions
 
         internal sealed override void Compile(CompilationContext context)
         {
-#if ORIG
-#else
+#if !ORIG  
+            
+            //@TODO REVISIT ME: needs better stack typing with ellipeses
+            var blockEntry = context.Depth.Count == 0 ? context.BlockEntry(context.Signature.RawReturnTypes) : context.Depth.Peek();
 
-            var blockType = context.Depth.Count == 0 ? BlockType.Empty : context.Depth.Peek();
 
-            if (blockType != BlockType.Empty)
+            foreach (var type in blockEntry.Types)
             {
-                context.Stack.Push((ValueType)blockType);
+                context.Stack.Push(type);
             }
-
+            
             context.Emit(OpCodes.Break);
 #endif
             context.Emit(OpCodes.Newobj, typeof(UnreachableException).GetTypeInfo().DeclaredConstructors.First(c => c.GetParameters().Length == 0));
             context.Emit(OpCodes.Throw);
+
+#if !ORIG
+            
+            foreach (var type in blockEntry.Types) //this is wrong
+            {
+                var local = context.DeclareLocal(((ValueType) type).ToSystemType());
+
+                context.Emit(OpCodes.Ldloc, local.LocalIndex);
+            }
+
+           /*
+
+            
+            var label = context.DefineLabel();
+            context.MarkLabel(label);
+            context.Emit(OpCodes.Br, label); 
+            */
+#endif
         }
     }
 }

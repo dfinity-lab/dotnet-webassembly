@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.IO;
 
 
-[assembly: DebuggerTypeProxy(typeof(WebAssembly.Value.Display), Target = typeof(WebAssembly.Value))]
+[assembly: DebuggerTypeProxy(typeof(ActorScript.Value.Display), Target = typeof(ActorScript.Value))]
 #if !ORIG 
 
 
@@ -82,25 +82,26 @@ namespace WebAssembly
 }
 
 
-namespace WebAssembly {
+namespace ActorScript
+{
 
     public static class Meta
     {
-        public static ActorScriptSection actorScriptSection = null;
+        public static WebAssembly.ActorScriptSection actorScriptSection = null;
     }
     public static class Globals
     {
-        public static Runtime.UnmanagedMemory mem = null;
-        public static byte ReadByte(UInt32 index) => Marshal.ReadByte(IntPtr.Add(mem.Start, (int) index));
+        public static WebAssembly.Runtime.UnmanagedMemory mem = null;
+        public static byte ReadByte(UInt32 index) => Marshal.ReadByte(IntPtr.Add(mem.Start, (int)index));
         public static int ReadInt32(UInt32 index) => Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index));
 
         public static long ReadInt64(UInt32 index) => Marshal.ReadInt64(IntPtr.Add(mem.Start, (int)index));
-        public static Tag ReadTag(UInt32 index) => (Tag) Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index));
-        public static Value ReadValue(UInt32 index) => (Value) unchecked((uint) Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index)));
+        public static Tag ReadTag(UInt32 index) => (Tag)Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index));
+        public static Value ReadValue(UInt32 index) => (Value)unchecked((uint)Marshal.ReadInt32(IntPtr.Add(mem.Start, (int)index)));
 
         public static string ReadUTF8(UInt32 index, int byteLen) =>
             //@TODO fix me : use PtrToStringUTF8 which is documented but not available  (version skew?)
-            Marshal.PtrToStringAnsi(IntPtr.Add(mem.Start, (int)index),byteLen);
+            Marshal.PtrToStringAnsi(IntPtr.Add(mem.Start, (int)index), byteLen);
 
         public static string ReadLabel(UInt32 index) =>
             Meta.actorScriptSection.Labels[
@@ -108,30 +109,31 @@ namespace WebAssembly {
 
     }
 
-    public enum Tag : int { 
-    Object = 1,
-    ObjInd = 2,
-    Array = 3,
-    Reference = 4,
-    Int = 5,
-    MutBox = 6,
-    Closure = 7,
-    Some = 8,
-    Variant = 9,
-    Text = 10,
-    Indirection = 11,
-    SmallWord = 12,
-   };
+    public enum Tag : int
+    {
+        Object = 1,
+        ObjInd = 2,
+        Array = 3,
+        Reference = 4,
+        Int = 5,
+        MutBox = 6,
+        Closure = 7,
+        Some = 8,
+        Variant = 9,
+        Text = 10,
+        Indirection = 11,
+        SmallWord = 12,
+    };
 
     [DebuggerDisplay("{ToString(),nq}")]
     public struct Field
     {
         public string lab;
         public Value val;
-        public Field (string lab, Value val) { this.lab = lab; this.val = val; }
+        public Field(string lab, Value val) { this.lab = lab; this.val = val; }
 
         public override string ToString() => lab + "=" + val;
-      
+
     }
 
     [DebuggerDisplay("{ToString(),nq}")]
@@ -141,7 +143,7 @@ namespace WebAssembly {
         public Value val;
         public Variant(string lab, Value val) { this.lab = lab; this.val = val; }
 
-        public override string ToString() => "#"+lab + " " +val;
+        public override string ToString() => "#" + lab + " " + val;
     }
 
 
@@ -154,8 +156,8 @@ namespace WebAssembly {
     }
 
 
-   [DebuggerTypeProxy(typeof(WebAssembly.Value.Display))]
-   [DebuggerDisplay("{ToString(),nq}")]
+    [DebuggerTypeProxy(typeof(Value.Display))]
+    [DebuggerDisplay("{ToString(),nq}")]
     public struct Value
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -163,7 +165,7 @@ namespace WebAssembly {
 
 
 
-        public Value (uint value) { this.value = value; }
+        public Value(uint value) { this.value = value; }
         // DebuggerTypeProxy(typeof(WebAssembly.Value.Display), Target = typeof(WebAssembly.Value))
         public static explicit operator Value(uint v) { return new Value(v); }
 
@@ -189,12 +191,14 @@ namespace WebAssembly {
                         obj = true;
                         break;
                     default:
-                        if ((word & 2 ) == 2) {
+                        if ((word & 2) == 2)
+                        {
                             var ptr = word + 1;
-                            obj = DecodeObject(ptr);             
+                            obj = DecodeObject(ptr);
                         }
                         else
-                        { obj = (int) word >> 2;
+                        {
+                            obj = (int)word >> 2;
                         }// TBR;
                         break;
                 }
@@ -228,8 +232,8 @@ namespace WebAssembly {
                             var len = Globals.ReadInt32(ptr + (sizeof(Tag)));
                             var a = new Value[len];
                             var elem = ptr + (uint)sizeof(Tag) + (uint)sizeof(Int32);
-                            for (uint i = 0; i<len; i++)
-                            {   
+                            for (uint i = 0; i < len; i++)
+                            {
                                 a[i] = Globals.ReadValue(elem);
                                 elem += (uint)sizeof(Int32);
                             }
@@ -245,8 +249,8 @@ namespace WebAssembly {
                     case Tag.Closure:
                         break;
                     case Tag.Some:
-                        {    
-                            var v = Globals.ReadValue(ptr+(sizeof(Tag)));
+                        {
+                            var v = Globals.ReadValue(ptr + (sizeof(Tag)));
                             return new Some(v);
                         }
                     case Tag.Variant:
@@ -262,12 +266,12 @@ namespace WebAssembly {
                     case Tag.Text:
                         {
                             var len = Globals.ReadInt32(ptr + sizeof(Tag));
-                            return Globals.ReadUTF8(ptr + sizeof(Tag) + sizeof(Int32),len);
+                            return Globals.ReadUTF8(ptr + sizeof(Tag) + sizeof(Int32), len);
                         }
                     case Tag.Indirection:
                     case Tag.SmallWord:
                         break;
-                    default: return "BAD TAG:" + (int) tag;
+                    default: return "BAD TAG:" + (int)tag;
                 }
                 return tag;
             }

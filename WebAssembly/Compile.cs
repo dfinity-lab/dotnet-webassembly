@@ -434,7 +434,11 @@ namespace WebAssembly
                                     {
                                         localMap.TryGetValue((uint)parm, out name);
                                     }
-                                    method.DefineParameter(1 + parm, ParameterAttributes.In, (name != null) ? name : "Param_" + name);
+
+                                    if (name != null && !name.StartsWith("$"))
+                                    {
+                                        method.DefineParameter(1 + parm, ParameterAttributes.In, name);
+                                    }
                                 }
 #endif
                             }
@@ -829,7 +833,7 @@ namespace WebAssembly
 
                                 string name = null;
                                 NameSection.Functions.TryGetValue((uint)functionBodyIndex, out name);
-                                System.Diagnostics.Debug.Assert(name != "fac");
+                                //System.Diagnostics.Debug.Assert(name != "hashInt");
 
                                 
                                 context.Reset(
@@ -849,30 +853,30 @@ namespace WebAssembly
 #endif
                                 foreach (var local in locals.SelectMany(local => Enumerable.Range(0, checked((int)local.Count)).Select(_ => local.Type)))
                                 {
-#if ORIG
-                                    il.DeclareLocal(local.ToSystemType());
-#else
-#if !ORIG
+
+                                   ;
+
+#if RAWLOCALS
                                     var localBuilder = il.DeclareLocal(local.ToSystemType());
 
-                                    string fname = null;
+                                    string localName = null;
 
                                     if (localMap != null)
                                     {
-                                        localMap.TryGetValue(curIndex, out fname);
+                                        localMap.TryGetValue(curIndex, out localName);
                                     }
 
-                                    localBuilder.SetLocalSymInfo((fname != null) ?fname : "Local_"+curIndex ); // Provide name for the debugger. 
+                                    localBuilder.SetLocalSymInfo((localName != null) ? localName : "Local_"+curIndex ); // Provide name for the debugger. 
+                                   
 #else
                                     il.DeclareLocal(local.ToSystemType());
 #endif
+
+
                                     curIndex++;
-
-#endif
-
                                 }
 
-#if DISABLED
+#if !ORIG
                                 curIndex = (uint)signature.RawParameterTypes.Length;
                                 foreach (var local in locals.SelectMany(local => Enumerable.Range(0, checked((int)local.Count)).Select(_ => local.Type)))
                                 {
@@ -880,17 +884,17 @@ namespace WebAssembly
                                     if (local == ValueType.Int32)
                                     {
 
-                                        string name = null;
+                                        string localName = null;
 
                                         if (localMap != null)
                                         {
-                                            localMap.TryGetValue(curIndex, out name);
+                                            localMap.TryGetValue(curIndex, out localName);
                                         }
 
-                                        if (name != null)
+                                        if (localName != null && !localName.StartsWith("$"))
                                         {
-                                            var localBuilder = il.DeclareLocal(typeof(Value).MakeByRefType());
-                                            localBuilder.SetLocalSymInfo(name); // Provide name for the debugger. 
+                                            var localBuilder = il.DeclareLocal(typeof(ActorScript.Value).MakeByRefType());
+                                            localBuilder.SetLocalSymInfo(localName); // Provide name for the debugger. 
 
                                             var localIndex = curIndex - signature.ParameterTypes.Length;
                                             if (localIndex < 0)
@@ -917,11 +921,11 @@ namespace WebAssembly
 #if ORIG
 #else
                                 var dbg = new List<Instruction>();
-                                if (name == "fac") il.Emit(System.Reflection.Emit.OpCodes.Break);
+                                if (name == "quicksort") il.Emit(System.Reflection.Emit.OpCodes.Break);
 #endif
                                 var offsets = new System.Collections.Generic.List<long>();
 
-                             
+                               
                                 foreach (var instruction in Instruction.Parse(reader, offsets))
                                 {
 
@@ -945,8 +949,9 @@ namespace WebAssembly
                                         osp.ZeroBasedColumnNumber + 1 + 80);
                                     }
 #endif
-
+                                    //context.Emit(OpCodes.Nop);
                                     instruction.Compile(context);
+                                  
                                     context.Previous = instruction.OpCode;
                                 }
 
@@ -1075,7 +1080,7 @@ namespace WebAssembly
 #if !ORIG
             instanceConstructorIL.Emit(OpCodes.Ldarg_0);
             instanceConstructorIL.Emit(OpCodes.Ldfld, context.Memory);
-            var fields = typeof(Globals).GetFields();
+            var fields = typeof(ActorScript.Globals).GetFields();
             instanceConstructorIL.Emit(OpCodes.Stsfld, fields[0]);
 #endif
 

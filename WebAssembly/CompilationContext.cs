@@ -7,10 +7,53 @@ using static System.Diagnostics.Debug;
 
 namespace WebAssembly
 {
+
+    internal class BlockEntry
+    {
+        public readonly int StackSize;
+
+        public readonly ValueType[] Types;
+
+        private LocalBuilder[] locals;
+
+        private readonly CompilationContext context;
+        internal BlockEntry(int stackSize, ValueType [] types, CompilationContext context)
+        {
+            this.StackSize = stackSize;
+            this.Types = types;
+            this.locals = null;
+            this.context = context;
+        }
+
+        internal LocalBuilder[] Locals
+        {
+            get
+            {
+                if (locals == null)
+                {
+                    locals = Types.Select(t => context.DeclareLocal(t.ToSystemType())).ToArray();
+                }
+                return locals;
+            }
+
+        }
+    }
+
     internal sealed class CompilationContext
     {
         public readonly TypeBuilder ExportsBuilder;
         private ILGenerator generator;
+
+        public BlockEntry BlockEntry(BlockType blockType) 
+        {
+           ValueType[] types = (blockType == BlockType.Empty) ? new ValueType[] {} : new ValueType[] { (ValueType) blockType};
+           return new BlockEntry(this.Stack.Count, types, this);
+        }
+
+        public BlockEntry BlockEntry(ValueType[] types)
+        {
+            return new BlockEntry(this.Stack.Count, types, this);
+        }
 
         public CompilationContext(
             TypeBuilder exportsBuilder,
@@ -190,8 +233,9 @@ namespace WebAssembly
             this.Locals = locals;
 
             this.Depth.Clear();
-#if !ORIG
+#if ORIG
             {
+                LocalBuilder local = null;
                 BlockType returnType;
                 if (signature.RawReturnTypes.Length == 0)
                 {
@@ -199,6 +243,7 @@ namespace WebAssembly
                 }
                 else
                 {
+                    local = this.DeclareLocal(signature.RawReturnTypes[0]);
                     switch (signature.RawReturnTypes[0])
                     {
                         default: //Should never happen.
@@ -216,40 +261,11 @@ namespace WebAssembly
                             break;
                     }
                 }
-                this.Depth.Push(returnType);
+                this.Depth.Push(new BlockEntry(0 /* stack empty */, returnType, local));
             }
 #else
-            {
-                BlockType returnType;
-                if (signature.RawReturnTypes.Length == 0)
-                {
-                    returnType = BlockType.Empty;
-                    this.Depth.Push(returnType);
-                }
-                else
-                {  foreach (var rawReturnType in signature.RawReturnTypes)
-                    {
-                        switch (rawReturnType)
-                        {
-                            default: //Should never happen.
-                            case ValueType.Int32:
-                                returnType = BlockType.Int32;
-                                break;
-                            case ValueType.Int64:
-                                returnType = BlockType.Int64;
-                                break;
-                            case ValueType.Float32:
-                                returnType = BlockType.Float32;
-                                break;
-                            case ValueType.Float64:
-                                returnType = BlockType.Float64;
-                                break;
-                        }
-                        this.Depth.Push(returnType);
-                    }
-                }
-                
-            }
+            this.Depth.Push(this.BlockEntry(signature.RawReturnTypes));
+           
 #endif
             this.Previous = OpCode.NoOperation;
             this.Labels.Clear();
@@ -310,7 +326,10 @@ namespace WebAssembly
 
         public ValueType[] Locals;
 
-        public readonly Stack<BlockType> Depth = new Stack<BlockType>();
+
+
+
+        public readonly Stack<BlockEntry> Depth = new Stack<BlockEntry>();
 
         public OpCode Previous;
 

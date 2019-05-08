@@ -1,3 +1,5 @@
+using System.Reflection.Emit;
+
 namespace WebAssembly.Instructions
 {
     /// <summary>
@@ -35,7 +37,8 @@ namespace WebAssembly.Instructions
         {
             var loopStart = context.DefineLabel();
             context.Labels.Add(checked((uint)context.Depth.Count), loopStart);
-            context.Depth.Push(Type);
+            var blockEntry = context.BlockEntry(Type);
+            context.Depth.Push(blockEntry);
             context.MarkLabel(loopStart);
             context.LoopLabels.Add(loopStart);
         }
