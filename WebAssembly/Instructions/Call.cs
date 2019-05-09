@@ -106,6 +106,7 @@ namespace WebAssembly.Instructions
                 outs[i] = context.DeclareLocal(signature.ReturnTypes[i]);
                 context.Emit(OpCodes.Ldloca, checked ((ushort)outs[i].LocalIndex));
             }
+
             context.Emit(OpCodes.Call, target);
 
             for (var i = 1; i < returnTypes.Length; i++)

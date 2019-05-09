@@ -19,6 +19,7 @@ using SourcemapToolkit.SourcemapParser;
     * figure out polymorphic stack typing for unreachable (and others?)
     * cleanup
     * remove hardcoded filenames fac.as[.wasm]
+    * get existing tests working again
     * display symbolic names for closure function pointers.
     * figure out whether we need more info for closure environments (if compiler loads to named locals on entry, we don't).
     * perhaps abstract unverifiable code to reduce peverify errors

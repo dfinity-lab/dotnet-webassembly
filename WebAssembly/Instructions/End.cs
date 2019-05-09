@@ -57,16 +57,33 @@ namespace WebAssembly.Instructions
 
                 if (returnsLength > 1)
                 {
+                    var locals = blockEntry.Locals;
                     for (int i = returnsLength - 1; i >= 0; i--)
                     {
                         var type = stack.Pop();
                         if (type != returns[i])
                             throw new StackTypeInvalidException(OpCode.End, returns[i], type);
-                        if (i > 0)
+                        if (i > 0) // set byref-return parameters
                         {
-                            //context.Emit(OpCodes.Starg,);
-                            context.Emit(OpCodes.Pop);
-                        }
+                            context.Emit(OpCodes.Stloc, locals[i].LocalIndex);
+                            context.Emit(OpCodes.Ldarg, context.Signature.RawParameterTypes.Length + 1 + (i - 1));
+                            context.Emit(OpCodes.Ldloc, locals[i].LocalIndex);
+                            switch (context.Signature.RawReturnTypes[i])
+                            {
+                                case ValueType.Int32:
+                                    context.Emit(OpCodes.Stind_I4);
+                                    break;
+                                case ValueType.Int64:
+                                    context.Emit(OpCodes.Stind_I8);
+                                    break;
+                                case ValueType.Float32:
+                                    context.Emit(OpCodes.Stind_R4);
+                                    break;
+                                case ValueType.Float64:
+                                    context.Emit(OpCodes.Stind_R8);
+                                    break;
+                            }
+                         }
                     }
 
                 }
